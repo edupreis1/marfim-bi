@@ -371,23 +371,14 @@ canvas.gc{max-height:155px}
   <div class="topbar"><div class="topbar-left"><span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700">Configurações da API</span></div></div>
   <div style="padding:28px 24px;max-width:600px;overflow:auto">
     <div class="cfg-section">
-      <div class="cfg-title">Google Sheets API</div>
-      <div class="cfg-field"><label class="cfg-label">ID da Planilha</label><input id="cfg-sheet" class="cfg-input" placeholder="1_0FBtDHCwh2p1lokWorRmBYk9TfNy5RShi-JP5CKI00"></div>
-      <div class="cfg-field"><label class="cfg-label">Client Email</label><input id="cfg-email" class="cfg-input" placeholder="marfim-bi@marfim-bi.iam.gserviceaccount.com"></div>
-      <div class="cfg-field"><label class="cfg-label">Private Key (Google)</label><textarea id="cfg-key" class="cfg-input" style="height:100px;resize:vertical;font-family:monospace;font-size:11px" placeholder="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"></textarea><div class="cfg-note">⚠ Salva só no browser (localStorage). Não enviada a nenhum servidor.</div></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="cfg-field"><label class="cfg-label">Aba Meta Ads</label><input id="cfg-tab-meta" class="cfg-input" value="Base"></div>
-        <div class="cfg-field"><label class="cfg-label">Aba Vendas</label><input id="cfg-tab-vendas" class="cfg-input" value="vendas"></div>
+      <div class="cfg-title">Status da conexão</div>
+      <div style="background:#1a1a1a;border-radius:8px;padding:14px;font-size:13px;color:#888;line-height:1.8">
+        As chaves de API ficam seguras no servidor.<br>
+        Nenhuma configuração necessária aqui.<br><br>
+        <span style="color:#48d976">✓ Google Sheets API</span> — configurada no servidor<br>
+        <span style="color:#48d976">✓ Anthropic API</span> — configurada no servidor
       </div>
-    </div>
-    <div class="cfg-section">
-      <div class="cfg-title">Anthropic API (Claude IA)</div>
-      <div class="cfg-field">
-        <label class="cfg-label">API Key</label>
-        <input id="cfg-anthropic" class="cfg-input" type="password" placeholder="sk-ant-...">
-        <div class="cfg-note">Crie em <b>console.anthropic.com</b> → API Keys. Começa com sk-ant-... Salva só no browser.</div>
-      </div>
-      <button class="btn btn-green" onclick="saveConfig()" style="width:100%;padding:12px">Salvar e conectar</button>
+      <button class="btn btn-green" onclick="loadData();switchMode('dashboard')" style="width:100%;padding:12px;margin-top:16px">Testar conexão</button>
     </div>
   </div>
 </div>
@@ -463,33 +454,18 @@ function updateMetaSidebar(m){
 // ══════════════════════════════════════
 // JWT + API
 // ══════════════════════════════════════
-async function getToken(cfg){
-  if(!cfg.privateKey) throw new Error('Private key não configurada');
-  const now = Math.floor(Date.now()/1000);
-  const enc = s => btoa(JSON.stringify(s)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
-  const hdr = enc({alg:'RS256',typ:'JWT'});
-  const pay = enc({iss:cfg.clientEmail,scope:'https://www.googleapis.com/auth/spreadsheets.readonly',aud:'https://oauth2.googleapis.com/token',exp:now+3600,iat:now});
-  const sig_input = `${hdr}.${pay}`;
-  const pem = cfg.privateKey.replace(/\\n/g,'\n').replace(/-----BEGIN[^-]*-----/g,'').replace(/-----END[^-]*-----/g,'').replace(/\s+/g,'');
-  const keyBuf = Uint8Array.from(atob(pem), c=>c.charCodeAt(0));
-  const key = await crypto.subtle.importKey('pkcs8', keyBuf.buffer, {name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'}, false, ['sign']);
-  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(sig_input));
-  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
-  const jwt = `${sig_input}.${sigB64}`;
-  const r = await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`});
-  const d = await r.json();
-  if(!d.access_token) throw new Error('Token falhou: '+JSON.stringify(d));
-  return d.access_token;
-}
+// JWT gerado no backend
 
 async function fetchTab(tabName, clientKey){
   const cfg = getClientCfg(clientKey);
-  const token = await getToken(cfg);
-  const cfg2 = getClientCfg(clientKey);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${cfg2.sheetId}/values/${encodeURIComponent(tabName)}`;
-  const r = await fetch(url,{headers:{Authorization:`Bearer ${token}`}});
-  if(!r.ok) throw new Error(`Erro ao ler aba ${tabName}: ${r.status}`);
-  return (await r.json()).values||[];
+  const r = await fetch('/api/sheets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sheetId: cfg.sheetId, tabName }),
+  });
+  const data = await r.json();
+  if(!r.ok) throw new Error(`Erro ao ler aba ${tabName}: ${r.status} — ${data.error||''}`);
+  return data.values || [];
 }
 
 function parseRows(rows){
@@ -931,21 +907,15 @@ async function generateAI(){
 
   for(const p of prompts){
     try{
-      const res=await fetch('https://api.anthropic.com/v1/messages',{
+      const res=await fetch('/api/insights',{
         method:'POST',
-        headers:{
-          'Content-Type':'application/json',
-          'x-api-key': getCfg().anthropicKey,
-          'anthropic-version':'2023-06-01',
-          'anthropic-dangerous-direct-browser-access':'true'
-        },
-        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,messages:[{role:'user',content:p.p}]})
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({prompt:p.p})
       });
       const j=await res.json();
-      if(j.error) throw new Error(j.error.message||JSON.stringify(j.error));
-      const texto=j.content?.[0]?.text;
-      if(!texto) throw new Error('Sem resposta: '+JSON.stringify(j).slice(0,150));
-      document.getElementById(p.id).textContent=texto;
+      if(!res.ok) throw new Error(j.error||'Erro desconhecido');
+      if(!j.text) throw new Error('Sem resposta da IA');
+      document.getElementById(p.id).textContent=j.text;
     }catch(e){
       document.getElementById(p.id).innerHTML=`<span style="color:#f04a6a;font-size:11px">Erro: ${e.message}</span>`;
     }

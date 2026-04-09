@@ -604,11 +604,7 @@ async function loadData(){
   const cfg = getCfg();
   setStatus('loading','Conectando...');
   document.getElementById('db-content').innerHTML='<div class="loading-wrap"><div class="spin"></div><div style="font-size:13px;color:#555">Lendo planilha...</div></div>';
-  if(!cfg.privateKey){
-    setStatus('offline','Sem configuração');
-    document.getElementById('db-content').innerHTML=`<div style="margin:24px;background:#1e1a14;border:1px solid #f0a44a;border-radius:10px;padding:20px;font-size:13px;color:#f0a44a">⚙ Configure a <b>private_key</b> nas configurações (ícone ⚙ no menu).</div>`;
-    return;
-  }
+  // chaves no backend — sem verificação no frontend
   const clientKey = document.getElementById('db-client')?.value || 'oestphone';
   const clientCl = CLIENTS[clientKey]||CLIENTS.oestphone;
   try{

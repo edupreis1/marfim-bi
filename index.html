@@ -585,6 +585,7 @@ function parseMetaRow(r){
       r['Conversations Started'] ||
       '0'
     )||0,
+    adName: (r['Ad Name'] || r['ad_name'] || '').trim(),
   };
 }
 
@@ -813,7 +814,9 @@ function renderDashboard(){
           return`<tr><td style="color:#ccc;max-width:260px">${n}</td><td><span class="tag ${d.tipo==='Conversão'?'tag-g':'tag-b'}">${d.tipo}</span></td><td>${fmtR(d.spend)}</td><td>${fmt(d.impressions)}</td><td>${fmt(d.clicks)}</td><td>${ctr2}%</td><td style="color:#48d976;font-weight:600">${fmt(d.conversations)}</td><td style="color:#48d976;font-weight:600">${cpr2}</td></tr>`;
         }).join('')}</tbody>
       </table>
-    </div>`;
+    </div>
+    <div class="sec-label" style="margin-top:18px">Performance por criativo</div>
+    <div class="chart-box" id="criativos-wrap"><div style="color:#444;font-size:12px;padding:8px 0">Calculando...</div></div>`;
 
   // Charts
   const chCfg={responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#555',font:{size:10}},grid:{color:'rgba(255,255,255,0.03)'},border:{display:false}},y:{ticks:{color:'#555',font:{size:10}},grid:{color:'rgba(255,255,255,0.03)'},border:{display:false}}}};
@@ -832,6 +835,79 @@ function renderDashboard(){
 
   dc('ch-cpr');
   charts['ch-cpr']=new Chart(document.getElementById('ch-cpr'),{type:'line',data:{labels:dlbls,datasets:[{data:days.map(d=>byDay[d].conversations>0?(byDay[d].spend/byDay[d].conversations).toFixed(2):null),borderColor:'#48d976',backgroundColor:'rgba(72,217,118,0.08)',tension:.4,fill:true,pointRadius:2,spanGaps:true}]},options:chCfg});
+
+  // ── Criativos ──
+  renderCriativos(fMeta);
+}
+
+function renderCriativos(rows){
+  const wrap = document.getElementById('criativos-wrap');
+  if(!wrap) return;
+
+  // Agrupar por Ad Name
+  const byAd = {};
+  rows.forEach(r => {
+    if(!r.adName) return;
+    if(!byAd[r.adName]) byAd[r.adName] = { spend:0, impressions:0, reach:0, clicks:0, conversations:0, campaign:r.campaign, objective:r.objective };
+    byAd[r.adName].spend        += r.spend;
+    byAd[r.adName].impressions  += r.impressions;
+    byAd[r.adName].reach        += r.reach;
+    byAd[r.adName].clicks       += r.clicks;
+    byAd[r.adName].conversations+= r.conversations;
+  });
+
+  const ads = Object.entries(byAd);
+  if(!ads.length){
+    wrap.innerHTML = '<div style="color:#444;font-size:12px;padding:8px 0">Nenhum dado de criativo encontrado. Verifique se a coluna "Ad Name" existe na planilha.</div>';
+    return;
+  }
+
+  // Ordenar por conversas desc, depois por cliques
+  ads.sort((a,b) => (b[1].conversations - a[1].conversations) || (b[1].clicks - a[1].clicks));
+
+  const maxConv  = Math.max(...ads.map(a => a[1].conversations), 1);
+  const maxSpend = Math.max(...ads.map(a => a[1].spend), 1);
+
+  const rows_html = ads.map(([name, d], i) => {
+    const ctr  = d.impressions > 0 ? (d.clicks / d.impressions * 100).toFixed(2) : '0';
+    const cpr  = d.conversations > 0 ? fmtR(d.spend / d.conversations) : '—';
+    const tipo = d.objective.toLowerCase().includes('engagement') ? 'Conversão' : 'Conteúdo';
+    const tagCls = tipo === 'Conversão' ? 'tag-g' : 'tag-b';
+    const convBar = `<div style="background:rgba(72,217,118,0.15);border-radius:4px;height:4px;margin-top:4px;width:100%"><div style="background:#48d976;height:4px;border-radius:4px;width:${Math.round(d.conversations/maxConv*100)}%"></div></div>`;
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+    return `<tr>
+      <td style="color:#ccc;max-width:220px">
+        <div style="font-weight:600;font-size:12px">${medal} ${name}</div>
+        <div style="font-size:10px;color:#555;margin-top:2px">${d.campaign.slice(0,40)}${d.campaign.length>40?'…':''}</div>
+      </td>
+      <td><span class="tag ${tagCls}">${tipo}</span></td>
+      <td>${fmtR(d.spend)}</td>
+      <td>${fmt(d.impressions)}</td>
+      <td>${fmt(d.reach)}</td>
+      <td>${fmt(d.clicks)}</td>
+      <td>${ctr}%</td>
+      <td style="min-width:80px">
+        <div style="color:#48d976;font-weight:600">${fmt(d.conversations)}</div>
+        ${convBar}
+      </td>
+      <td style="color:#48d976;font-weight:600">${cpr}</td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:11px;color:#555;font-weight:600;text-transform:uppercase;letter-spacing:.6px">${ads.length} criativos no período</div>
+      <div style="font-size:10px;color:#444">ordenado por conversas</div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="camp-table">
+        <thead><tr>
+          <th>Criativo</th><th>Tipo</th><th>Invest.</th><th>Impressões</th>
+          <th>Alcance</th><th>Cliques</th><th>CTR</th><th>Conversas</th><th>CPR</th>
+        </tr></thead>
+        <tbody>${rows_html}</tbody>
+      </table>
+    </div>`;
 }
 
 // ══════════════════════════════════════

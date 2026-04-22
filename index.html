@@ -286,17 +286,6 @@ canvas.gc{max-height:155px}
     <button class="ppill" onclick="setPeriod('14d',this)">14 dias</button>
     <button class="ppill" onclick="setPeriod('custom',this)">Personalizado</button>
     <div class="psep"></div>
-    <span class="period-label">Mês ref.</span>
-    <select class="sel" id="db-month-sel" onchange="if(metaData.length)renderDashboard()" style="padding:5px 10px;font-size:11px">
-      <option value="2026-03">Mar/26</option>
-      <option value="2026-02">Fev/26</option>
-      <option value="2026-01">Jan/26</option>
-      <option value="2025-12">Dez/25</option>
-      <option value="2025-11">Nov/25</option>
-      <option value="2025-10">Out/25</option>
-      <option value="2025-09">Set/25</option>
-    </select>
-    <div class="psep"></div>
     <div id="custom-range" style="display:none;align-items:center;gap:8px">
       <input type="date" class="date-input" id="date-from" onchange="applyCustom()">
       <span style="color:#444;font-size:12px">até</span>
@@ -616,37 +605,39 @@ function agg(rows){
     {spend:0,impressions:0,reach:0,clicks:0,conversations:0});
 }
 
-function getRefMonth(){
-  const sel = document.getElementById('db-month-sel');
-  return sel ? sel.value : '';
-}
-
 function filterPeriod(rows, field){
-  let from, to;
-  const refMonth = getRefMonth();
   const now = new Date();
+  let from, to;
   if(currentPeriod==='mes'){
-    if(refMonth){
-      const [y,m] = refMonth.split('-').map(Number);
-      from=new Date(y,m-1,1); to=new Date(y,m,0);
-    } else {
-      from=new Date(now.getFullYear(),now.getMonth(),1); to=new Date(now.getFullYear(),now.getMonth()+1,0);
-    }
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    to   = new Date(now.getFullYear(), now.getMonth()+1, 0);
+  } else if(currentPeriod==='semana'){
+    const d = now.getDay();
+    from = new Date(now); from.setDate(now.getDate() - d + (d===0 ? -6 : 1));
+    to   = new Date(from); to.setDate(from.getDate() + 6);
+  } else if(currentPeriod==='7d'){
+    from = new Date(now); from.setDate(now.getDate() - 6);
+    to   = new Date(now);
+  } else if(currentPeriod==='14d'){
+    from = new Date(now); from.setDate(now.getDate() - 13);
+    to   = new Date(now);
+  } else if(currentPeriod==='custom' && customFrom && customTo){
+    from = new Date(customFrom);
+    to   = new Date(customTo);
+  } else {
+    return rows;
   }
-  else if(currentPeriod==='semana'){ const d=now.getDay(); from=new Date(now); from.setDate(now.getDate()-d+(d===0?-6:1)); to=new Date(from); to.setDate(from.getDate()+6); }
-  else if(currentPeriod==='7d'){ from=new Date(now); from.setDate(now.getDate()-6); to=now; }
-  else if(currentPeriod==='14d'){ from=new Date(now); from.setDate(now.getDate()-13); to=now; }
-  else if(currentPeriod==='custom'&&customFrom&&customTo){ from=new Date(customFrom); to=new Date(customTo); }
-  else return rows;
-  from.setHours(0,0,0,0); to.setHours(23,59,59,999);
-  return rows.filter(r=>{ const d=new Date(r[field]); return d>=from&&d<=to; });
+  from.setHours(0,0,0,0);
+  to.setHours(23,59,59,999);
+  return rows.filter(r => {
+    const d = new Date(r[field]);
+    return !isNaN(d) && d >= from && d <= to;
+  });
 }
 
 function getPeriodLabel(){
   const now=new Date(); const months=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   if(currentPeriod==='mes'){
-    const rm = getRefMonth();
-    if(rm){ const [y,m]=rm.split('-').map(Number); return `${months[m-1]}/${String(y).slice(2)}`; }
     return `${months[now.getMonth()]}/${String(now.getFullYear()).slice(2)}`;
   }
   if(currentPeriod==='semana') return 'Esta semana';

@@ -313,11 +313,7 @@ canvas.gc{max-height:155px}
         </optgroup>
       </select>
       <span class="tb-label">Mês</span>
-      <select class="sel" id="r-month" onchange="if(typeof renderReport==='function') renderReport()">
-        <option value="2026-03">Março/26</option>
-        <option value="2026-02">Fevereiro/26</option>
-        <option value="2026-01">Janeiro/26</option>
-      </select>
+      <select class="sel" id="r-month" onchange="if(typeof renderReport==='function') renderReport()"></select>
     </div>
     <div class="topbar-right">
       <button class="btn btn-ghost" onclick="generateAI()">✦ Gerar análise IA</button>
@@ -1113,7 +1109,25 @@ function switchMode(m){
 // ══════════════════════════════════════
 // INIT
 // ══════════════════════════════════════
+function populateMonthSelect(){
+  const sel = document.getElementById('r-month');
+  if(!sel) return;
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const now = new Date();
+  sel.innerHTML = '';
+  for(let i = 0; i < 12; i++){
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const opt = document.createElement('option');
+    opt.value = `${y}-${m}`;
+    opt.textContent = `${meses[d.getMonth()]}/${String(y).slice(2)}`;
+    sel.appendChild(opt);
+  }
+}
+
 updateMetaSidebar(getMeta());
+populateMonthSelect();
 loadData();
 </script>
 </body>

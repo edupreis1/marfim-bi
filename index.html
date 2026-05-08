@@ -540,14 +540,24 @@ document.getElementById(‘sb-mvendas’).textContent = m.vendas;
 
 async function fetchTab(tabName, clientKey){
 const cfg = getClientCfg(clientKey);
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 15000);
+try {
 const r = await fetch(’/api/sheets’, {
 method: ‘POST’,
 headers: { ‘Content-Type’: ‘application/json’ },
 body: JSON.stringify({ sheetId: cfg.sheetId, tabName }),
+signal: controller.signal,
 });
+clearTimeout(timeout);
 const data = await r.json();
 if(!r.ok) throw new Error(`Erro ao ler aba ${tabName}: ${r.status} — ${data.error||''}`);
 return data.values || [];
+} catch(e) {
+clearTimeout(timeout);
+if(e.name === ‘AbortError’) throw new Error(`Timeout ao ler aba ${tabName} — tente novamente`);
+throw e;
+}
 }
 
 function parseRows(rows){
@@ -712,8 +722,8 @@ lastLoadedClient = clientKey;
 setStatus(‘online’,`${metaData.length} reg. Meta · ${vendasData.length} reg. Vendas`);
 renderDashboard();
 } catch(err){
-setStatus(‘offline’,‘Erro’);
-document.getElementById(‘db-content’).innerHTML=`<div style="margin:24px;background:#1e1414;border:1px solid #f04a6a;border-radius:10px;padding:20px;font-size:13px;color:#f04a6a">⚠ ${err.message}</div>`;
+setStatus(‘offline’,‘Erro — clique em Atualizar’);
+document.getElementById(‘db-content’).innerHTML=`<div style="margin:24px;background:#1e1414;border:1px solid #f04a6a;border-radius:10px;padding:20px;font-size:13px;color:#f04a6a"> <div style="font-weight:600;margin-bottom:8px">⚠ ${err.message}</div> <div style="font-size:11px;color:#888">Verifique se a planilha está compartilhada com marfim-bi@marfim-bi.iam.gserviceaccount.com</div> <button onclick="loadData()" style="margin-top:12px;background:#48d976;color:#0a1a0f;border:none;padding:8px 16px;border-radius:7px;font-family:DM Sans,sans-serif;font-size:12px;font-weight:600;cursor:pointer">↺ Tentar novamente</button> </div>`;
 }
 }
 

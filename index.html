@@ -473,9 +473,9 @@ const DEF_CFG = { sheetId:'1_0FBtDHCwh2p1lokWorRmBYk9TfNy5RShi-JP5CKI00', client
 const CLIENTS = {
   oestphone:        { name:'Oest Phone',              group:null,    sheetId:'1_0FBtDHCwh2p1lokWorRmBYk9TfNy5RShi-JP5CKI00', tabMeta:'Base', tabVendas:'vendas', ticket:500,    vendasLabel:'Vendas',     vendasMode:'daily'  },
   dv:               { name:'DV iPhones',              group:null,    sheetId:'1otcSUV5zT8ipAohinPHOGijOMXO3N3XF3O9orPo8X1w', tabMeta:'Base', tabVendas:'vendas', ticket:469,    vendasLabel:'Vendas',     vendasMode:'daily'  },
-  inova_sede:       { name:'Inova Credit',            group:'inova', sheetId:'1NdVk8ah28orM9noUcUBaDICjPRhlv2SqFw_PK5OB0hk', tabMeta:'Base', tabVendas:'vendas', ticket:13000,  vendasLabel:'Aquisições', vendasMode:'monthly', unit:'Sede'        },
-  inova_alphaville: { name:'Inova Credit',            group:'inova', sheetId:'1bv35HmPnazotlx2pHZYmToFLcDNCq4Q7dWrXLUKK9Ns', tabMeta:'Base', tabVendas:'vendas', ticket:13000,  vendasLabel:'Aquisições', vendasMode:'monthly', unit:'Alphaville'  },
-  inova_consolidado:{ name:'Inova Credit',            group:'inova', sheetId:null, tabMeta:'Base', tabVendas:'vendas', ticket:13000, vendasLabel:'Aquisições', vendasMode:'monthly', unit:'Consolidado', units:['inova_sede','inova_alphaville'] },
+  inova_sede:       { name:'Inova Credit',            group:'inova', sheetId:'1NdVk8ah28orM9noUcUBaDICjPRhlv2SqFw_PK5OB0hk', tabMeta:'Base', tabVendas:'vendas', ticket:13000,  vendasLabel:'Aquisicoes', vendasMode:'monthly', unit:'Sede'        },
+  inova_alphaville: { name:'Inova Credit',            group:'inova', sheetId:'1bv35HmPnazotlx2pHZYmToFLcDNCq4Q7dWrXLUKK9Ns', tabMeta:'Base', tabVendas:'vendas', ticket:13000,  vendasLabel:'Aquisicoes', vendasMode:'monthly', unit:'Alphaville'  },
+  inova_consolidado:{ name:'Inova Credit',            group:'inova', sheetId:null, tabMeta:'Base', tabVendas:'vendas', ticket:13000, vendasLabel:'Aquisicoes', vendasMode:'monthly', unit:'Consolidado', units:['inova_sede','inova_alphaville'] },
   smartmoto:        { name:'Smart Moto',               group:null,    sheetId:'19b84h4BD1uq3m2TK4L4tD5Ig6mZVlurzJJebEBvO_8A', tabMeta:'Base', tabVendas:'vendas', ticket:500, vendasLabel:'Vendas', vendasMode:'daily' },
 };
 
@@ -743,7 +743,8 @@ const meta = getMeta();
 const clientKey2 = document.getElementById(‘db-client’)?.value||‘oestphone’;
 const clientInfo = CLIENTS[clientKey2]||CLIENTS.oestphone;
 if(clientInfo.ticket) meta.ticket = clientInfo.ticket;
-const vendasLabel = clientInfo.vendasLabel||‘Vendas’;
+const vendasLabelRaw = clientInfo.vendasLabel||‘Vendas’;
+const vendasLabel = vendasLabelRaw === ‘Aquisicoes’ ? ‘Aquisições’ : vendasLabelRaw;
 const fMeta = filterPeriod(metaData,‘day’);
 const fVendas = filterPeriod(vendasData,‘date’);
 const engRows = fMeta.filter(isEng);
@@ -933,7 +934,8 @@ const meta=getMeta();
 const clientKey2 = document.getElementById(‘db-client’)?.value||‘oestphone’;
 const clientInfo = CLIENTS[clientKey2]||CLIENTS.oestphone;
 if(clientInfo.ticket) meta.ticket = clientInfo.ticket;
-const vendasLabel = clientInfo.vendasLabel||‘Vendas’;
+const vendasLabelRaw = clientInfo.vendasLabel||‘Vendas’;
+const vendasLabel = vendasLabelRaw === ‘Aquisicoes’ ? ‘Aquisições’ : vendasLabelRaw;
 // Se o cliente selecionado mudou, recarrega dados
 const rKey = document.getElementById(‘r-client’)?.value||‘oestphone’;
 if(rKey !== lastLoadedClient) {
@@ -957,7 +959,8 @@ const convRate=total.conversations>0&&totalVendas>0?totalVendas/total.conversati
 const rClientKey = document.getElementById(‘r-client’)?.value||‘oestphone’;
 const rClientInfo = CLIENTS[rClientKey]||CLIENTS.oestphone;
 if(rClientInfo.ticket) meta.ticket = rClientInfo.ticket;
-const rVendasLabel = rClientInfo.vendasLabel||‘Vendas’;
+const rVendasLabelRaw = rClientInfo.vendasLabel||‘Vendas’;
+const rVendasLabel = rVendasLabelRaw === ‘Aquisicoes’ ? ‘Aquisições’ : rVendasLabelRaw;
 const rUnitLabel = rClientInfo.unit ? ` — ${rClientInfo.unit}` : ‘’;
 const rClientName = (CLIENTS[rClientKey]?.name||‘Oeste Phone’) + rUnitLabel;
 [‘r1-name’,‘r2-name’,‘r3-name’].forEach(id=>document.getElementById(id).textContent=rClientName);

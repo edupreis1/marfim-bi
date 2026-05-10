@@ -146,7 +146,7 @@ canvas.gc{max-height:155px}
 <div class="flash" id="flash"></div>
 <div class="modal-overlay" id="modal-metas" style="display:none" onclick="if(event.target===this)closeMetas()">
   <div class="modal">
-    <div class="modal-title">Metas e Ticket Medio</div>
+    <div class="modal-title" id="modal-title">Metas e Ticket Medio</div>
     <div class="modal-row"><span class="modal-label">Ticket medio (R$)</span><input class="modal-input" id="m-ticket" type="number" value="500"></div>
     <div class="modal-row"><span class="modal-label">Meta conversas/mes</span><input class="modal-input" id="m-conv" type="number" value="1200"></div>
     <div class="modal-row"><span class="modal-label">Meta vendas/mes</span><input class="modal-input" id="m-vendas" type="number" value="420"></div>
@@ -339,7 +339,7 @@ canvas.gc{max-height:155px}
       </div>
       <div class="rpc"><div class="rpc-t">KPIs do periodo</div><div id="r-sidebar">-</div></div>
       <div class="rpc">
-        <div class="rpc-t">Config</div>
+        <div class="rpc-t">Config — <span id="sb-client-name" style="color:#48d976;text-transform:none;letter-spacing:0">Oeste Phone</span></div>
         <div class="di"><span class="dl">Ticket medio</span><span class="dv" id="sb-ticket">R$ 500</span></div>
         <div class="di"><span class="dl">Meta conversas</span><span class="dv" id="sb-mconv">1.200</span></div>
         <div class="di"><span class="dl">Meta vendas</span><span class="dv" id="sb-mvendas">420</span></div>
@@ -423,24 +423,39 @@ var CLIENTS = {
 
 var DEF_META = { ticket:500, conv:1200, vendas:420, cpr:7 };
 
-function getMeta(){ try{ return Object.assign({},DEF_META,JSON.parse(localStorage.getItem('mmeta')||'{}')); }catch(e){ return Object.assign({},DEF_META); } }
+function getMeta(key){
+  key = key || document.getElementById('db-client').value || 'oestphone';
+  try{ return Object.assign({},DEF_META,JSON.parse(localStorage.getItem('mmeta_'+key)||'{}')); }
+  catch(e){ return Object.assign({},DEF_META); }
+}
 function saveMetas(){
+  var key = document.getElementById('db-client').value || 'oestphone';
   var m={ ticket:+document.getElementById('m-ticket').value||500, conv:+document.getElementById('m-conv').value||1200, vendas:+document.getElementById('m-vendas').value||420, cpr:+document.getElementById('m-cpr').value||7 };
-  localStorage.setItem('mmeta',JSON.stringify(m)); updateMetaSidebar(m); closeMetas();
+  localStorage.setItem('mmeta_'+key, JSON.stringify(m));
+  updateMetaSidebar(m); closeMetas();
   if(metaData.length) renderDashboard();
   if(currentMode==='relatorio') renderReport();
 }
 function openMetas(){
-  var m=getMeta();
-  document.getElementById('m-ticket').value=m.ticket; document.getElementById('m-conv').value=m.conv;
-  document.getElementById('m-vendas').value=m.vendas; document.getElementById('m-cpr').value=m.cpr;
-  document.getElementById('modal-metas').style.display='flex';
+  var key = document.getElementById('db-client').value || 'oestphone';
+  var cl = CLIENTS[key] || CLIENTS.oestphone;
+  var m = getMeta(key);
+  document.getElementById('m-ticket').value = m.ticket;
+  document.getElementById('m-conv').value   = m.conv;
+  document.getElementById('m-vendas').value = m.vendas;
+  document.getElementById('m-cpr').value    = m.cpr;
+  document.getElementById('modal-title').textContent = 'Metas — ' + cl.name;
+  document.getElementById('modal-metas').style.display = 'flex';
 }
 function closeMetas(){ document.getElementById('modal-metas').style.display='none'; }
-function updateMetaSidebar(m){
-  document.getElementById('sb-ticket').textContent='R$ '+m.ticket;
-  document.getElementById('sb-mconv').textContent=fmt(m.conv);
-  document.getElementById('sb-mvendas').textContent=m.vendas;
+function updateMetaSidebar(m, key){
+  key = key || document.getElementById('db-client').value || 'oestphone';
+  var cl = CLIENTS[key] || CLIENTS.oestphone;
+  document.getElementById('sb-ticket').textContent  = 'R$ '+m.ticket;
+  document.getElementById('sb-mconv').textContent   = fmt(m.conv);
+  document.getElementById('sb-mvendas').textContent = m.vendas;
+  var sbName = document.getElementById('sb-client-name');
+  if(sbName) sbName.textContent = cl.name;
 }
 
 async function fetchTab(sheetId,tabName){
@@ -551,7 +566,7 @@ function setStatus(s,t){ document.getElementById('status-dot').className='status
 function renderDashboard(){
   var key=document.getElementById('db-client').value;
   var cl=CLIENTS[key]||CLIENTS.oestphone;
-  var meta=getMeta(); if(cl.ticket) meta.ticket=cl.ticket;
+  var meta=getMeta(key); if(cl.ticket) meta.ticket=cl.ticket;
   var vlabel=cl.vendasLabel||'Vendas';
   var fMeta=filterPeriod(metaData,'day'); var fVendas=filterPeriod(vendasData,'date');
   var engRows=fMeta.filter(isEng); var contRows=fMeta.filter(function(r){ return !isEng(r); });
@@ -686,7 +701,7 @@ async function renderReport(){
   var mk=document.getElementById('r-month').value;
   var rk=document.getElementById('r-client').value;
   var rcl=CLIENTS[rk]||CLIENTS.oestphone;
-  var rmeta=getMeta(); if(rcl.ticket) rmeta.ticket=rcl.ticket;
+  var rmeta=getMeta(rk); if(rcl.ticket) rmeta.ticket=rcl.ticket;
   var rvl=rcl.vendasLabel||'Vendas';
   if(rk!==lastClient){
     try{ setStatus('loading','Carregando '+rcl.name+'...'); await loadDataForClient(rk); setStatus('online',metaData.length+' reg.'); }
@@ -747,7 +762,7 @@ async function generateAI(){
   var mk=document.getElementById('r-month').value;
   var rk=document.getElementById('r-client').value;
   var rcl=CLIENTS[rk]||CLIENTS.oestphone;
-  var rmeta=getMeta(); if(rcl.ticket) rmeta.ticket=rcl.ticket;
+  var rmeta=getMeta(rk); if(rcl.ticket) rmeta.ticket=rcl.ticket;
   var rvl=rcl.vendasLabel||'Vendas';
   var mMeta=metaData.filter(function(r){ return r.day&&r.day.indexOf(mk)===0; });
   var mVendas=vendasData.filter(function(r){ return r.date&&r.date.indexOf(mk)===0; });

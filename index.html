@@ -811,7 +811,13 @@ async function generateWA(){
     try{ await loadDataForClient(waKey); }
     catch(e){ document.getElementById('wa-result').textContent='Erro ao carregar: '+e.message; return; }
   }
-  var smData=metaData.filter(function(r){ return r.day&&r.day>=from&&r.day<=to; });
+  // Filtrar usando Date objects igual ao dashboard (evita problemas de formato de string)
+  var fromDate=new Date(from); fromDate.setHours(0,0,0,0);
+  var toDate=new Date(to); toDate.setHours(23,59,59,999);
+  var smData=metaData.filter(function(r){
+    if(!r.day) return false;
+    var dt=new Date(r.day); return !isNaN(dt)&&dt>=fromDate&&dt<=toDate;
+  });
   if(!smData.length){
     document.getElementById('wa-result').textContent='Nenhum dado encontrado para o periodo selecionado.';
     return;

@@ -351,7 +351,20 @@ canvas.gc{max-height:155px}
 <!-- WHATSAPP -->
 <div class="mode" id="mode-whatsapp">
   <div class="topbar">
-    <div class="topbar-left"><span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700">Relatorio Diario - Smart Moto Locadora</span></div>
+    <div class="topbar-left">
+      <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700">Relatorio Diario</span>
+      <span class="tb-label">Cliente</span>
+      <select class="sel" id="wa-client" onchange="onWAClientChange()">
+        <option value="smart_locadora">Smart Moto - Locadora</option>
+        <option value="oestphone">Oeste Phone</option>
+        <option value="dv">DV iPhones</option>
+        <optgroup label="Inova Credit">
+          <option value="inova_sede">Inova Credit - Sede</option>
+          <option value="inova_alphaville">Inova Credit - Alphaville</option>
+          <option value="inova_consolidado">Inova Credit - Consolidado</option>
+        </optgroup>
+      </select>
+    </div>
   </div>
   <div style="padding:24px;max-width:680px;overflow:auto">
     <div class="wa-section">
@@ -772,6 +785,11 @@ async function dlPage(idx){
 function dlCurrent(){ dlPage(currentRP); }
 async function dlAll(){ for(var i=0;i<3;i++){ await dlPage(i); await new Promise(function(r){ setTimeout(r,400); }); } }
 
+function onWAClientChange(){
+  // Ao trocar cliente no relatorio diario, limpa o resultado
+  document.getElementById('wa-result').textContent='Selecione um periodo e clique em Gerar relatorio';
+}
+
 function setWADate(preset){
   var now=new Date();
   function f(d){ return d.toISOString().slice(0,10); }
@@ -783,12 +801,19 @@ function setWADate(preset){
   document.getElementById('wa-from').value=from; document.getElementById('wa-to').value=to;
 }
 
-function generateWA(){
+async function generateWA(){
   var from=document.getElementById('wa-from').value; var to=document.getElementById('wa-to').value;
   if(!from||!to){ alert('Selecione o periodo.'); return; }
+  var waKey=document.getElementById('wa-client').value;
+  // Se o cliente selecionado for diferente do carregado, carrega os dados
+  if(waKey!==lastClient){
+    document.getElementById('wa-result').textContent='Carregando dados...';
+    try{ await loadDataForClient(waKey); }
+    catch(e){ document.getElementById('wa-result').textContent='Erro ao carregar: '+e.message; return; }
+  }
   var smData=metaData.filter(function(r){ return r.day&&r.day>=from&&r.day<=to; });
   if(!smData.length){
-    document.getElementById('wa-result').textContent='Nenhum dado encontrado.\nCarregue o cliente Smart Moto - Locadora no Dashboard primeiro.';
+    document.getElementById('wa-result').textContent='Nenhum dado encontrado para o periodo selecionado.';
     return;
   }
   var impressoes=smData.reduce(function(a,r){ return a+r.impressions; },0);
@@ -845,7 +870,13 @@ function switchMode(m){
   document.getElementById('mode-'+m).classList.add('active');
   document.getElementById('si-'+m).classList.add('active');
   if(m==='relatorio'&&metaData.length) renderReport();
-  if(m==='whatsapp') setWADate('today');
+  if(m==='whatsapp'){
+    setWADate('today');
+    // Sincroniza cliente do WA com o do dashboard se for smart_locadora
+    var dbKey=document.getElementById('db-client').value;
+    var waClientSel=document.getElementById('wa-client');
+    if(waClientSel&&CLIENTS[dbKey]) waClientSel.value=dbKey;
+  }
 }
 function populateMonthSelect(){
   var sel=document.getElementById('r-month'); if(!sel) return;

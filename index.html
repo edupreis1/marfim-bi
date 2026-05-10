@@ -418,7 +418,7 @@ var CLIENTS = {
   inova_alphaville:   { name:'Inova Credit - Alphaville',sheetId:'1bv35HmPnazotlx2pHZYmToFLcDNCq4Q7dWrXLUKK9Ns', tabMeta:'Base', tabVendas:'vendas', ticket:13000, vendasLabel:'Aquisicoes', units:null },
   inova_consolidado:  { name:'Inova Credit - Consolidado',sheetId:null, tabMeta:'Base', tabVendas:'vendas', ticket:13000, vendasLabel:'Aquisicoes', units:['inova_sede','inova_alphaville'] },
   smart_locadora:     { name:'Smart Moto - Locadora',    sheetId:'19b84h4BD1uq3m2TK4L4tD5Ig6mZVlurzJJebEBvO_8A', tabMeta:'Base', tabVendas:'vendas', ticket:500,   vendasLabel:'Vendas',     vendasMode:'daily',   units:null },
-  smart_franquia:     { name:'Smart Moto - Franquia',    sheetId:'1ez-ml2cjZTN78Ru9IlGIjwI4_R7esb4cM1vRjT0bjzc', tabMeta:'Base', tabVendas:'vendas', ticket:39000, vendasLabel:'Vendas',     vendasMode:'monthly', units:null }
+  smart_franquia:     { name:'Smart Moto - Franquia',    sheetId:'1ez-ml2cjZTN78Ru9IlGIjwI4_R7esb4cM1vRjT0bjzc', tabMeta:'Base', tabVendas:'vendas', ticket:39000, vendasLabel:'Vendas',     vendasMode:'monthly', units:null, isForm:true, convLabel:'Resultados (formulario)', cprLabel:'Custo por Resultado' }
 };
 
 var DEF_META = { ticket:500, conv:1200, vendas:420, cpr:7 };
@@ -467,7 +467,7 @@ function parseMetaRow(r){
     impressions:   parseInt(r['Impressions']||'0')||0,
     reach:         parseInt(r['Reach']||'0')||0,
     clicks:        parseInt(r['Link Clicks']||r['Clicks (All)']||r['clicks']||'0')||0,
-    conversations: parseInt(r['Messaging Conversations Started']||r['Messages']||'0')||0
+    conversations: parseInt(r['Messaging Conversations Started']||r['Messages']||r['Results']||'0')||0
   };
 }
 function parseVendasRow(r){
@@ -613,7 +613,7 @@ function renderDashboard(){
       '<div class="kpi-box green"><div class="kpi-label">Investimento</div><div class="kpi-val">'+fmtK(total.spend)+'</div><div class="kpi-sub">total no periodo</div></div>'+
       '<div class="kpi-box teal"><div class="kpi-label">Alcance</div><div class="kpi-val">'+fmt(total.reach)+'</div><div class="kpi-sub">freq '+freq.toFixed(2)+'x - CPM '+fmtR(cpm)+'</div></div>'+
       '<div class="kpi-box amber"><div class="kpi-label">Cliques</div><div class="kpi-val">'+fmt(total.clicks)+'</div><div class="kpi-sub">CTR '+ctr.toFixed(2)+'%</div></div>'+
-      '<div class="kpi-box green"><div class="kpi-label">Conversas WhatsApp</div><div class="kpi-val">'+fmt(total.conversations)+'</div><div class="kpi-sub '+(cprOk?'up':'dn')+'">CPR '+fmtR(cpr)+' '+(cprOk?'ok':'acima meta')+'</div></div>'+
+      '<div class="kpi-box green"><div class="kpi-label">'+(cl.isForm?cl.convLabel:'Conversas WhatsApp')+'</div><div class="kpi-val">'+fmt(total.conversations)+'</div><div class="kpi-sub '+(cprOk?'up':'dn')+'">'+(cl.isForm?cl.cprLabel:'CPR')+' '+fmtR(cpr)+' '+(cprOk?'ok':'acima meta')+'</div></div>'+
     '</div>'+
     '<div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">'+
       '<div class="kpi-box purple"><div class="kpi-label">'+vlabel+'</div><div class="kpi-val">'+(totalVendas||'-')+'</div><div class="kpi-sub">'+(totalVendas?'meta: '+meta.vendas+' - conv '+convRate.toFixed(1)+'%':'')+'</div></div>'+
@@ -622,7 +622,7 @@ function renderDashboard(){
       '<div class="kpi-box blue"><div class="kpi-label">CAC</div><div class="kpi-val">'+(cac>0?fmtR(cac):'-')+'</div><div class="kpi-sub">custo por venda</div></div>'+
     '</div>'+
     '<div class="charts-row" style="grid-template-columns:2fr 1fr">'+
-      '<div class="chart-box"><div class="chart-title">Conversas por dia <span>'+fmt(total.conversations)+' total</span></div><canvas id="ch-conv"></canvas></div>'+
+      '<div class="chart-box"><div class="chart-title">'+(cl.isForm?cl.convLabel:'Conversas por dia')+' <span>'+fmt(total.conversations)+' total</span></div><canvas id="ch-conv"></canvas></div>'+
       '<div class="chart-box"><div class="chart-title">Conversao vs Conteudo</div><canvas id="ch-tipo"></canvas></div>'+
     '</div>'+
     '<div class="charts-row" style="grid-template-columns:1fr 1fr 1fr">'+
@@ -841,6 +841,14 @@ async function generateWA(){
   var waKey2=document.getElementById('wa-client').value;
   var waCl=CLIENTS[waKey2]||CLIENTS.smart_locadora;
   var waNome=waCl.name.toUpperCase();
+  var isForm2 = waCl.isForm || false;
+  var linhaConv = isForm2
+    ? 'Resultados (formulario): '+fmtN(mensagens)
+    : 'Mensagens Recebidas: '+fmtN(mensagens);
+  var linhaCusto = isForm2
+    ? 'Custo por Resultado: '+fmtR2(custoMsg)
+    : 'Custo por Mensagem: '+fmtR2(custoMsg);
+
   document.getElementById('wa-result').textContent=
     waNome+'\n'+
     'Segue abaixo o relatorio das campanhas\n'+
@@ -849,8 +857,8 @@ async function generateWA(){
     'Alcance: '+fmtN(alcance)+'\n'+
     'Taxa de Cliques no Link (CTR): '+fmtP(ctr)+'\n'+
     'Cliques no Link: '+fmtN(cliques)+'\n'+
-    'Mensagens Recebidas: '+fmtN(mensagens)+'\n'+
-    'Custo por Mensagem: '+fmtR2(custoMsg)+'\n'+
+    linhaConv+'\n'+
+    linhaCusto+'\n'+
     'Valor Investido: '+fmtR2(investido)+'\n'+
     'Valor Investido + Imposto Meta (12,15%): '+fmtR2(investImp);
 }

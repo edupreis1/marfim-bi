@@ -636,10 +636,18 @@ function renderDashboard(){
       '<div class="kpi-box blue"><div class="kpi-label">ROAS Est.</div><div class="kpi-val">'+(roas>0?roas.toFixed(2)+'x':'-')+'</div><div class="kpi-sub">fat/invest</div></div>'+
       '<div class="kpi-box blue"><div class="kpi-label">CAC</div><div class="kpi-val">'+(cac>0?fmtR(cac):'-')+'</div><div class="kpi-sub">custo por venda</div></div>'+
     '</div>'+
-    '<div class="charts-row" style="grid-template-columns:2fr 1fr">'+
-      '<div class="chart-box"><div class="chart-title">'+(cl.isForm?cl.convLabel:'Conversas por dia')+' <span>'+fmt(total.conversations)+' total</span></div><canvas id="ch-conv"></canvas></div>'+
-      '<div class="chart-box"><div class="chart-title">Conversao vs Conteudo</div><canvas id="ch-tipo"></canvas></div>'+
-    '</div>'+
+    (cl.vendasMode!=='monthly'&&!cl.isForm?
+      '<div class="charts-row" style="grid-template-columns:2fr 1.4fr 0.8fr">'+
+        '<div class="chart-box"><div class="chart-title">'+(cl.isForm?cl.convLabel:'Conversas por dia')+' <span>'+fmt(total.conversations)+' total</span></div><canvas id="ch-conv"></canvas></div>'+
+        '<div class="chart-box"><div class="chart-title">Vendas por dia <span style="color:#a855f7">'+totalVendas+' total</span></div><canvas id="ch-vendas"></canvas></div>'+
+        '<div class="chart-box" style="padding:14px"><div class="chart-title" style="margin-bottom:8px">Tipo</div><canvas id="ch-tipo"></canvas></div>'+
+      '</div>+'
+    :
+      '<div class="charts-row" style="grid-template-columns:2fr 1fr">'+
+        '<div class="chart-box"><div class="chart-title">'+(cl.isForm?cl.convLabel:'Conversas por dia')+' <span>'+fmt(total.conversations)+' total</span></div><canvas id="ch-conv"></canvas></div>'+
+        '<div class="chart-box"><div class="chart-title">Conversao vs Conteudo</div><canvas id="ch-tipo"></canvas></div>'+
+      '</div>+'
+    )+
     '<div class="charts-row" style="grid-template-columns:1fr 1fr 1fr">'+
       '<div class="chart-box"><div class="chart-title">Investimento diario <span>'+fmtK(total.spend)+'</span></div><canvas id="ch-spend"></canvas></div>'+
       '<div class="chart-box"><div class="chart-title">CTR diario</div><canvas id="ch-ctr"></canvas></div>'+
@@ -675,6 +683,36 @@ function renderDashboard(){
   charts['ch-ctr']=new Chart(document.getElementById('ch-ctr'),{type:'line',data:{labels:dlbls,datasets:[{data:days.map(function(d){ return byDay[d].impressions>0?(byDay[d].clicks/byDay[d].impressions*100).toFixed(2):0; }),borderColor:'#4a90d9',backgroundColor:'rgba(74,144,217,.08)',tension:.4,fill:true,pointRadius:2}]},options:chCfg});
   dc('ch-cpr');
   charts['ch-cpr']=new Chart(document.getElementById('ch-cpr'),{type:'line',data:{labels:dlbls,datasets:[{data:days.map(function(d){ return byDay[d].conversations>0?(byDay[d].spend/byDay[d].conversations).toFixed(2):null; }),borderColor:'#48d976',backgroundColor:'rgba(72,217,118,.08)',tension:.4,fill:true,pointRadius:2,spanGaps:true}]},options:chCfg});
+
+  // Grafico de vendas por dia (so para clientes com vendas diarias)
+  if(cl.vendasMode!=='monthly'&&!cl.isForm&&document.getElementById('ch-vendas')){
+    // Mapear vendas por dia
+    var byVendaDay={};
+    fVendas.forEach(function(r){ byVendaDay[r.date]=(byVendaDay[r.date]||0)+r.vendas; });
+    // Usar os mesmos dias do meta como eixo X
+    var vendasData2=days.map(function(d){ return byVendaDay[d]||0; });
+    dc('ch-vendas');
+    charts['ch-vendas']=new Chart(document.getElementById('ch-vendas'),{
+      type:'bar',
+      data:{
+        labels:dlbls,
+        datasets:[{
+          data:vendasData2,
+          backgroundColor:vendasData2.map(function(v){ return v>0?'rgba(168,85,247,0.7)':'rgba(168,85,247,0.15)'; }),
+          borderRadius:4,
+          label:'Vendas'
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:true,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){ return ctx.parsed.y+' vendas'; }}}},
+        scales:{
+          x:{ticks:{color:'#555',font:{size:10}},grid:{color:'rgba(255,255,255,.03)'},border:{display:false}},
+          y:{ticks:{color:'#555',font:{size:10},stepSize:1},grid:{color:'rgba(255,255,255,.03)'},border:{display:false},beginAtZero:true}
+        }
+      }
+    });
+  }
 }
 
 function renderFunnel(containerId,data,labels){

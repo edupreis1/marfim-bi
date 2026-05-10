@@ -182,7 +182,7 @@ canvas.gc{max-height:155px}
         </optgroup>
         <optgroup label="Smart Moto">
           <option value="smart_locadora">Smart Moto - Locadora</option>
-          <option value="smart_franquia" disabled>(Franquia - em breve)</option>
+          <option value="smart_franquia">Smart Moto - Franquia</option>
         </optgroup>
       </select>
       <span id="conn-status" style="font-size:11px;color:#555;display:flex;align-items:center;margin-left:4px">
@@ -230,6 +230,7 @@ canvas.gc{max-height:155px}
         </optgroup>
         <optgroup label="Smart Moto">
           <option value="smart_locadora">Smart Moto - Locadora</option>
+          <option value="smart_franquia">Smart Moto - Franquia</option>
         </optgroup>
       </select>
       <span class="tb-label">Mes</span>
@@ -356,6 +357,7 @@ canvas.gc{max-height:155px}
       <span class="tb-label">Cliente</span>
       <select class="sel" id="wa-client" onchange="onWAClientChange()">
         <option value="smart_locadora">Smart Moto - Locadora</option>
+        <option value="smart_franquia">Smart Moto - Franquia</option>
         <option value="oestphone">Oeste Phone</option>
         <option value="dv">DV iPhones</option>
         <optgroup label="Inova Credit">
@@ -415,7 +417,8 @@ var CLIENTS = {
   inova_sede:         { name:'Inova Credit - Sede',      sheetId:'1NdVk8ah28orM9noUcUBaDICjPRhlv2SqFw_PK5OB0hk', tabMeta:'Base', tabVendas:'vendas', ticket:13000, vendasLabel:'Aquisicoes', units:null },
   inova_alphaville:   { name:'Inova Credit - Alphaville',sheetId:'1bv35HmPnazotlx2pHZYmToFLcDNCq4Q7dWrXLUKK9Ns', tabMeta:'Base', tabVendas:'vendas', ticket:13000, vendasLabel:'Aquisicoes', units:null },
   inova_consolidado:  { name:'Inova Credit - Consolidado',sheetId:null, tabMeta:'Base', tabVendas:'vendas', ticket:13000, vendasLabel:'Aquisicoes', units:['inova_sede','inova_alphaville'] },
-  smart_locadora:     { name:'Smart Moto - Locadora',    sheetId:'19b84h4BD1uq3m2TK4L4tD5Ig6mZVlurzJJebEBvO_8A', tabMeta:'Base', tabVendas:'vendas', ticket:500,   vendasLabel:'Vendas',     units:null }
+  smart_locadora:     { name:'Smart Moto - Locadora',    sheetId:'19b84h4BD1uq3m2TK4L4tD5Ig6mZVlurzJJebEBvO_8A', tabMeta:'Base', tabVendas:'vendas', ticket:500,   vendasLabel:'Vendas',     vendasMode:'daily',   units:null },
+  smart_franquia:     { name:'Smart Moto - Franquia',    sheetId:'1ez-ml2cjZTN78Ru9IlGIjwI4_R7esb4cM1vRjT0bjzc', tabMeta:'Base', tabVendas:'vendas', ticket:39000, vendasLabel:'Vendas',     vendasMode:'monthly', units:null }
 };
 
 var DEF_META = { ticket:500, conv:1200, vendas:420, cpr:7 };
@@ -835,8 +838,11 @@ async function generateWA(){
   function fmtN(n){ return Math.round(n).toLocaleString('pt-BR'); }
   function fmtR2(n){ return 'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
   function fmtP(n){ return n.toFixed(2).replace('.',',')+('%'); }
+  var waKey2=document.getElementById('wa-client').value;
+  var waCl=CLIENTS[waKey2]||CLIENTS.smart_locadora;
+  var waNome=waCl.name.toUpperCase();
   document.getElementById('wa-result').textContent=
-    'SMART MOTOS - LOCACAO\n'+
+    waNome+'\n'+
     'Segue abaixo o relatorio das campanhas\n'+
     'Periodo: '+periodo+'\n\n'+
     'Impressoes: '+fmtN(impressoes)+'\n'+

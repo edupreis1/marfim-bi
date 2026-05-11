@@ -878,14 +878,27 @@ async function generateWA(){
     document.getElementById('wa-result').textContent='Nenhum dado encontrado para o periodo selecionado.';
     return;
   }
-  var impressoes=smData.reduce(function(a,r){ return a+r.impressions; },0);
-  var alcance=smData.reduce(function(a,r){ return a+r.reach; },0);
-  var cliques=smData.reduce(function(a,r){ return a+r.clicks; },0);
-  var mensagens=smData.reduce(function(a,r){ return a+r.conversations; },0);
-  var investido=smData.reduce(function(a,r){ return a+r.spend; },0);
-  var ctr=impressoes>0?(cliques/impressoes*100):0;
-  var custoMsg=mensagens>0?(investido/mensagens):0;
-  var investImp=investido*1.1215;
+  // Separar por tipo de campanha
+  var smConv = smData.filter(function(r){ return r.objective.toLowerCase().indexOf('engagement')>=0; });
+  var smTudo = smData; // todos (conversao + conteudo)
+
+  // Impressoes e Alcance: conversao + distribuicao (todos)
+  var impressoes = smTudo.reduce(function(a,r){ return a+r.impressions; },0);
+  var alcance    = smTudo.reduce(function(a,r){ return a+r.reach; },0);
+
+  // Cliques, Mensagens e CPR: so campanha de conversao
+  var cliques    = smConv.reduce(function(a,r){ return a+r.clicks; },0);
+  var mensagens  = smConv.reduce(function(a,r){ return a+r.conversations; },0);
+
+  // Investido: conversao + distribuicao (todos)
+  var investido  = smTudo.reduce(function(a,r){ return a+r.spend; },0);
+
+  // CTR baseado so nas campanhas de conversao
+  var impressoesConv = smConv.reduce(function(a,r){ return a+r.impressions; },0);
+  var ctr = impressoesConv>0?(cliques/impressoesConv*100):0;
+
+  var custoMsg   = mensagens>0?(smConv.reduce(function(a,r){ return a+r.spend; },0)/mensagens):0;
+  var investImp  = investido*1.1215;
   function fmtDate(s){ var p=s.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
   var periodo=from===to?fmtDate(from):fmtDate(from)+' ate '+fmtDate(to);
   function fmtN(n){ return Math.round(n).toLocaleString('pt-BR'); }

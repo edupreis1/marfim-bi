@@ -878,28 +878,29 @@ async function generateWA(){
     document.getElementById('wa-result').textContent='Nenhum dado encontrado para o periodo selecionado.';
     return;
   }
-  // Separar por tipo de campanha
-  var smConv = smData.filter(function(r){ return r.objective.toLowerCase().indexOf('engagement')>=0; });
-  var smTudo = smData;
+  // Impressoes, Alcance e Investido: sempre de todas as campanhas
+  var impressoes = smData.reduce(function(a,r){ return a+r.impressions; },0);
+  var alcance    = smData.reduce(function(a,r){ return a+r.reach; },0);
+  var investido  = smData.reduce(function(a,r){ return a+r.spend; },0);
+  var investImp  = investido*1.1215;
 
-  // Se for cliente isForm (Franquia) ou nao tiver campanha de conversao, usa tudo
-  var useConvOnly = !isForm2 && smConv.length > 0;
-  var smParaConv  = useConvOnly ? smConv : smTudo;
+  // Cliques, Mensagens e CPR:
+  // - Smart Locadora (waKey2 === 'smart_locadora'): so campanha de conversao (engagement)
+  // - Todos os outros (Franquia, Oeste Phone, DV etc): todas as campanhas
+  var smParaConv;
+  if(waKey2 === 'smart_locadora'){
+    var smConv = smData.filter(function(r){ return r.objective.toLowerCase().indexOf('engagement')>=0; });
+    smParaConv = smConv.length > 0 ? smConv : smData;
+  } else {
+    smParaConv = smData;
+  }
 
-  // Impressoes e Alcance: sempre todos
-  var impressoes = smTudo.reduce(function(a,r){ return a+r.impressions; },0);
-  var alcance    = smTudo.reduce(function(a,r){ return a+r.reach; },0);
-  var investido  = smTudo.reduce(function(a,r){ return a+r.spend; },0);
-
-  // Cliques, Mensagens/Resultados e CPR: conversao (ou tudo se isForm/sem conversao)
-  var cliques   = smParaConv.reduce(function(a,r){ return a+r.clicks; },0);
-  var mensagens = smParaConv.reduce(function(a,r){ return a+r.conversations; },0);
-
-  var impressoesRef = smParaConv.reduce(function(a,r){ return a+r.impressions; },0);
-  var ctr      = impressoesRef>0?(cliques/impressoesRef*100):0;
-  var spendConv= smParaConv.reduce(function(a,r){ return a+r.spend; },0);
-  var custoMsg = mensagens>0?(spendConv/mensagens):0;
-  var investImp= investido*1.1215;
+  var cliques    = smParaConv.reduce(function(a,r){ return a+r.clicks; },0);
+  var mensagens  = smParaConv.reduce(function(a,r){ return a+r.conversations; },0);
+  var spendConv  = smParaConv.reduce(function(a,r){ return a+r.spend; },0);
+  var impConv    = smParaConv.reduce(function(a,r){ return a+r.impressions; },0);
+  var ctr        = impConv>0?(cliques/impConv*100):0;
+  var custoMsg   = mensagens>0?(spendConv/mensagens):0;
   function fmtDate(s){ var p=s.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
   var periodo=from===to?fmtDate(from):fmtDate(from)+' ate '+fmtDate(to);
   function fmtN(n){ return Math.round(n).toLocaleString('pt-BR'); }

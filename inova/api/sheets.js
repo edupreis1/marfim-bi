@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { sheetId, tabName } = req.body;
-  if (!sheetId || !tabName) return res.status(400).json({ error: 'sheetId e tabName são obrigatórios' });
+  if (!sheetId || !tabName) return res.status(400).json({ error: 'sheetId e tabName sao obrigatorios' });
 
   try {
     const token = await getAccessToken();
@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     if (!r.ok) {
       const txt = await r.text();
-      return res.status(r.status).json({ error: `Sheets API: ${r.status} — ${txt.slice(0, 200)}` });
+      return res.status(r.status).json({ error: `Sheets API: ${r.status} - ${txt.slice(0, 200)}` });
     }
     const data = await r.json();
     return res.status(200).json({ values: data.values || [] });
@@ -27,7 +27,7 @@ async function getAccessToken() {
   const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
   const privateKey   = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
-  if (!clientEmail || !privateKey) throw new Error('GOOGLE_CLIENT_EMAIL ou GOOGLE_PRIVATE_KEY não configurados');
+  if (!clientEmail || !privateKey) throw new Error('GOOGLE_CLIENT_EMAIL ou GOOGLE_PRIVATE_KEY nao configurados');
 
   const now = Math.floor(Date.now() / 1000);
   const header  = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
@@ -42,8 +42,15 @@ async function getAccessToken() {
   const sigInput = `${header}.${payload}`;
   const keyBuffer = pemToBuffer(privateKey);
 
+  // Detectar formato da chave: PKCS8 (BEGIN PRIVATE KEY) ou PKCS1 (BEGIN RSA PRIVATE KEY)
+  const isPKCS8 = privateKey.includes('BEGIN PRIVATE KEY');
+  const algorithm = isPKCS8
+    ? { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }
+    : { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' };
+  const format = isPKCS8 ? 'pkcs8' : 'pkcs8';
+
   const cryptoKey = await crypto.subtle.importKey(
-    'pkcs8', keyBuffer,
+    format, keyBuffer,
     { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
     false, ['sign']
   );
@@ -69,6 +76,9 @@ function base64url(input) {
 }
 
 function pemToBuffer(pem) {
-  const b64 = pem.replace(/-----BEGIN[^-]*-----/g, '').replace(/-----END[^-]*-----/g, '').replace(/\s+/g, '');
+  const b64 = pem
+    .replace(/-----BEGIN[^-]*-----/g, '')
+    .replace(/-----END[^-]*-----/g, '')
+    .replace(/\s+/g, '');
   return Buffer.from(b64, 'base64');
 }

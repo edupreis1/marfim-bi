@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inova Credit — Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#0e0e0e;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;min-height:100vh}
+.header{background:#111;border-bottom:1px solid rgba(255,255,255,.06);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.header-left{display:flex;align-items:center;gap:16px}
+.logo{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#48d976;letter-spacing:1px}
+.logo-sep{width:1px;height:24px;background:rgba(255,255,255,.1)}
+.client-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#fff}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sel{background:#1a1a1a;border:1px solid rgba(255,255,255,.1);color:#fff;padding:7px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;outline:none}
+.sel option{background:#1a1a1a}
+.btn{padding:7px 16px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn-ghost{background:transparent;color:#666;border:1px solid rgba(255,255,255,.1)}.btn-ghost:hover{border-color:#48d976;color:#48d976}
+.status-wrap{display:flex;align-items:center;gap:6px;font-size:11px;color:#555}
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.status-dot.online{background:#48d976;box-shadow:0 0 6px #48d976}
+.status-dot.offline{background:#f04a6a}
+.status-dot.loading{background:#f0a44a;animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.period-bar{padding:10px 28px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:8px;background:#111;overflow-x:auto}
+.period-bar::-webkit-scrollbar{display:none}
+.period-label{font-size:10px;color:#444;font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-right:4px;flex-shrink:0}
+.ppill{padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.08);background:#1a1a1a;color:#555;transition:all .15s;flex-shrink:0}
+.ppill:hover{border-color:#48d976;color:#48d976}
+.ppill.active{background:#48d976;color:#0a1a0f;border-color:#48d976}
+.psep{width:1px;height:18px;background:rgba(255,255,255,.06);margin:0 4px;flex-shrink:0}
+.date-input{background:#1a1a1a;border:1px solid rgba(255,255,255,.1);color:#ccc;padding:5px 10px;border-radius:8px;font-size:11px;font-family:'DM Sans',sans-serif;outline:none;flex-shrink:0}
+.content{padding:24px 28px;max-width:1400px}
+.sec-label{font-size:10px;font-weight:600;color:#333;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+.kpi-row{display:grid;gap:12px;margin-bottom:18px}
+.kpi-box{background:#161616;border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:16px;position:relative;overflow:hidden}
+.kpi-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi-box.green::before{background:#48d976}.kpi-box.teal::before{background:#4af0c8}
+.kpi-box.amber::before{background:#f0a44a}.kpi-box.blue::before{background:#4a90d9}
+.kpi-box.purple::before{background:#a855f7}
+.kpi-label{font-size:10px;color:#555;font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+.kpi-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;line-height:1;margin-bottom:4px}
+.kpi-sub{font-size:11px;color:#555}
+.kpi-sub.up{color:#48d976;font-weight:600}.kpi-sub.dn{color:#f04a6a;font-weight:600}
+.charts-row{display:grid;gap:14px;margin-bottom:18px}
+.chart-box{background:#161616;border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:18px}
+.chart-title{font-size:11px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.chart-title span{color:#48d976;font-size:13px;font-weight:700}
+canvas{max-height:200px}
+.camp-table{width:100%;border-collapse:collapse}
+.camp-table th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#444;padding:9px 12px;text-align:left;border-bottom:1px solid rgba(255,255,255,.05)}
+.camp-table td{padding:10px 12px;font-size:12px;border-bottom:1px solid rgba(255,255,255,.04)}
+.camp-table tr:last-child td{border-bottom:none}
+.camp-table tr:hover td{background:rgba(255,255,255,.02)}
+.tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
+.tag-g{background:rgba(72,217,118,.1);color:#48d976}.tag-b{background:rgba(74,144,217,.1);color:#4a90d9}
+.loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;gap:14px}
+.spin{width:32px;height:32px;border:3px solid #222;border-top-color:#48d976;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.unit-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-left:8px}
+.unit-sede{background:rgba(72,217,118,.1);color:#48d976}
+.unit-alph{background:rgba(74,144,217,.1);color:#4a90d9}
+.footer{text-align:center;padding:24px;font-size:11px;color:#333;border-top:1px solid rgba(255,255,255,.04);margin-top:8px}
+.footer span{color:#48d976}
+@media(max-width:768px){
+  .content{padding:16px}
+  .kpi-row{grid-template-columns:repeat(2,1fr) !important}
+  .kpi-val{font-size:18px !important}
+  .charts-row{grid-template-columns:1fr !important}
+  .header{padding:14px 16px}
+  .period-bar{padding:10px 16px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">MARFIM</div>
+    <div class="logo-sep"></div>
+    <div class="client-name">Inova Credit</div>
+  </div>
+  <div class="header-right">
+    <div class="status-wrap">
+      <span class="status-dot loading" id="status-dot"></span>
+      <span id="status-text">Conectando...</span>
+    </div>
+    <select class="sel" id="unit-sel" onchange="loadData()">
+      <option value="sede">Sede</option>
+      <option value="alphaville">Alphaville</option>
+    </select>
+    <button class="btn btn-ghost" onclick="loadData()">Atualizar</button>
+  </div>
+</div>
+
+<div class="period-bar">
+  <span class="period-label">Periodo</span>
+  <button class="ppill active" onclick="setPeriod('mes',this)">Este mes</button>
+  <button class="ppill" onclick="setPeriod('7d',this)">7 dias</button>
+  <button class="ppill" onclick="setPeriod('14d',this)">14 dias</button>
+  <button class="ppill" onclick="setPeriod('custom',this)">Personalizado</button>
+  <div class="psep"></div>
+  <div id="custom-range" style="display:none;align-items:center;gap:8px">
+    <input type="date" class="date-input" id="date-from" onchange="applyCustom()">
+    <span style="color:#444;font-size:12px">ate</span>
+    <input type="date" class="date-input" id="date-to" onchange="applyCustom()">
+  </div>
+  <span id="period-lbl" style="font-size:11px;color:#48d976;margin-left:8px"></span>
+</div>
+
+<div class="content">
+  <div id="main-content">
+    <div class="loading-wrap"><div class="spin"></div><div style="font-size:13px;color:#555">Carregando dados...</div></div>
+  </div>
+</div>
+
+<div class="footer">Powered by <span>Marfim Digital</span> — Dashboard exclusivo Inova Credit</div>
+
+<script>
+var SHEETS = {
+  sede:       { sheetId:'1NdVk8ah28orM9noUcUBaDICjPRhlv2SqFw_PK5OB0hk', label:'Sede' },
+  alphaville: { sheetId:'1bv35HmPnazotlx2pHZYmToFLcDNCq4Q7dWrXLUKK9Ns', label:'Alphaville' }
+};
+var TICKET = 13000;
+
+var metaData=[], vendasData=[], currentPeriod='mes', customFrom=null, customTo=null, charts={};
+
+function dc(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+function fmt(n){ return Number(n).toLocaleString('pt-BR'); }
+function fmtR(n){ return 'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtK(n){ return n>=1000?'R$ '+(n/1000).toFixed(1)+'k':fmtR(n); }
+function isEng(r){ return r.objective.toLowerCase().indexOf('engagement')>=0; }
+function agg(rows){
+  return rows.reduce(function(a,r){
+    return {spend:a.spend+r.spend,impressions:a.impressions+r.impressions,reach:a.reach+r.reach,clicks:a.clicks+r.clicks,conversations:a.conversations+r.conversations};
+  },{spend:0,impressions:0,reach:0,clicks:0,conversations:0});
+}
+
+async function fetchTab(sheetId,tabName){
+  var ctrl=new AbortController(); var timer=setTimeout(function(){ ctrl.abort(); },15000);
+  try{
+    var r=await fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sheetId:sheetId,tabName:tabName}),signal:ctrl.signal});
+    clearTimeout(timer); var data=await r.json();
+    if(!r.ok) throw new Error('Erro ao ler aba '+tabName+': '+r.status);
+    return data.values||[];
+  }catch(e){ clearTimeout(timer); if(e.name==='AbortError') throw new Error('Timeout'); throw e; }
+}
+function parseRows(rows){
+  if(!rows.length) return [];
+  var headers=rows[0].map(function(h){ return h.trim(); });
+  return rows.slice(1).map(function(row){ var obj={}; headers.forEach(function(h,i){ obj[h]=row[i]!==undefined?row[i]:''; }); return obj; });
+}
+function parseMetaRow(r){
+  return {
+    day:r['Day']||r['date']||'',
+    objective:r['Objective']||'',
+    campaign:r['Campaign Name']||'',
+    adName:(r['Ad Name']||'').trim(),
+    spend:parseFloat((r['Amount Spent']||'0').toString().replace(',','.'))||0,
+    impressions:parseInt(r['Impressions']||'0')||0,
+    reach:parseInt(r['Reach']||'0')||0,
+    clicks:parseInt(r['Link Clicks']||r['Clicks (All)']||'0')||0,
+    conversations:parseInt(r['Messaging Conversations Started']||r['Messages']||'0')||0
+  };
+}
+function parseVendasRow(r){
+  var raw=(r['Data']||'').trim(); var d=raw;
+  if(/^\d{4}-\d{2}$/.test(raw)) d=raw+'-01';
+  var v=parseInt(r['Aquisicoes']||r['Pedidos / Vendas']||r['Vendas']||'0')||0;
+  return {date:d,vendas:v};
+}
+
+function filterPeriod(rows,field){
+  var now=new Date(); var from,to;
+  if(currentPeriod==='mes'){ from=new Date(now.getFullYear(),now.getMonth(),1); to=new Date(now.getFullYear(),now.getMonth()+1,0); }
+  else if(currentPeriod==='7d'){ from=new Date(now); from.setDate(now.getDate()-6); to=new Date(now); }
+  else if(currentPeriod==='14d'){ from=new Date(now); from.setDate(now.getDate()-13); to=new Date(now); }
+  else if(currentPeriod==='custom'&&customFrom&&customTo){ from=new Date(customFrom); to=new Date(customTo); }
+  else return rows;
+  from.setHours(0,0,0,0); to.setHours(23,59,59,999);
+  return rows.filter(function(r){ var dt=new Date(r[field]); return !isNaN(dt)&&dt>=from&&dt<=to; });
+}
+function getPeriodLabel(){
+  var now=new Date(); var months=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  if(currentPeriod==='mes') return months[now.getMonth()]+'/'+String(now.getFullYear()).slice(2);
+  if(currentPeriod==='7d') return 'Ultimos 7 dias';
+  if(currentPeriod==='14d') return 'Ultimos 14 dias';
+  if(currentPeriod==='custom'&&customFrom&&customTo) return customFrom+' - '+customTo;
+  return '';
+}
+
+async function loadData(){
+  var unit=document.getElementById('unit-sel').value;
+  var sh=SHEETS[unit];
+  setStatus('loading','Carregando...');
+  document.getElementById('main-content').innerHTML='<div class="loading-wrap"><div class="spin"></div><div style="font-size:13px;color:#555">Carregando dados...</div></div>';
+  try{
+    var mr=await fetchTab(sh.sheetId,'Base');
+    var vr=await fetchTab(sh.sheetId,'vendas');
+    metaData=parseRows(mr).map(parseMetaRow).filter(function(r){ return r.day; });
+    vendasData=parseRows(vr).map(parseVendasRow).filter(function(r){ return r.date; });
+    setStatus('online',metaData.length+' registros');
+    renderDashboard();
+  }catch(err){
+    setStatus('offline','Erro');
+    var div=document.createElement('div');
+    div.style.cssText='margin:24px 0;background:#1e1414;border:1px solid #f04a6a;border-radius:10px;padding:20px;font-size:13px;color:#f04a6a';
+    div.innerHTML='<div style="font-weight:600;margin-bottom:8px">Erro: '+err.message+'</div>'+
+      '<button onclick="loadData()" style="margin-top:8px;background:#48d976;color:#0a1a0f;border:none;padding:8px 16px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">Tentar novamente</button>';
+    document.getElementById('main-content').innerHTML=''; document.getElementById('main-content').appendChild(div);
+  }
+}
+function setStatus(s,t){ document.getElementById('status-dot').className='status-dot '+s; document.getElementById('status-text').textContent=t; }
+
+function renderDashboard(){
+  var unit=document.getElementById('unit-sel').value;
+  var sh=SHEETS[unit];
+  var label=getPeriodLabel();
+  document.getElementById('period-lbl').textContent=label;
+
+  var fMeta=filterPeriod(metaData,'day');
+  var fVendas=filterPeriod(vendasData,'date');
+  var engRows=fMeta.filter(isEng);
+  var contRows=fMeta.filter(function(r){ return !isEng(r); });
+  var total=agg(fMeta), eng=agg(engRows), cont=agg(contRows);
+  var totalAquis=fVendas.reduce(function(a,r){ return a+r.vendas; },0);
+  var faturamento=totalAquis*TICKET;
+  var ctr=total.impressions>0?total.clicks/total.impressions*100:0;
+  var cpm=total.impressions>0?total.spend/total.impressions*1000:0;
+  var cpr=total.conversations>0?total.spend/total.conversations:0;
+  var roas=faturamento>0&&total.spend>0?faturamento/total.spend:0;
+  var cac=totalAquis>0&&total.spend>0?total.spend/totalAquis:0;
+  var freq=total.reach>0?total.impressions/total.reach:0;
+
+  var byDay={};
+  fMeta.forEach(function(r){
+    if(!byDay[r.day]) byDay[r.day]={spend:0,conversations:0,impressions:0,clicks:0};
+    byDay[r.day].spend+=r.spend; byDay[r.day].conversations+=r.conversations;
+    byDay[r.day].impressions+=r.impressions; byDay[r.day].clicks+=r.clicks;
+  });
+  var days=Object.keys(byDay).sort();
+  var dlbls=days.map(function(d){ return d.slice(5); });
+
+  var byCamp={};
+  fMeta.forEach(function(r){
+    var k=r.campaign.length>42?r.campaign.slice(0,42)+'...':r.campaign;
+    var tipo=isEng(r)?'Conversao':'Conteudo';
+    if(!byCamp[k]) byCamp[k]={spend:0,conversations:0,clicks:0,impressions:0,tipo:tipo};
+    byCamp[k].spend+=r.spend; byCamp[k].conversations+=r.conversations;
+    byCamp[k].clicks+=r.clicks; byCamp[k].impressions+=r.impressions;
+  });
+
+  var cprOk=cpr>0&&cpr<=50;
+  var unitBadge='<span class="unit-badge '+(unit==='sede'?'unit-sede':'unit-alph')+'">'+sh.label+'</span>';
+
+  var campRows=Object.entries(byCamp).sort(function(a,b){ return b[1].conversations-a[1].conversations; }).map(function(entry){
+    var n=entry[0],d=entry[1];
+    var ctr2=d.impressions>0?(d.clicks/d.impressions*100).toFixed(2):'0';
+    var cpr2=d.conversations>0?fmtR(d.spend/d.conversations):'-';
+    return '<tr><td style="color:#ccc;max-width:260px">'+n+'</td><td><span class="tag '+(d.tipo==='Conversao'?'tag-g':'tag-b')+'">'+d.tipo+'</span></td><td>'+fmtR(d.spend)+'</td><td>'+fmt(d.impressions)+'</td><td>'+fmt(d.clicks)+'</td><td>'+ctr2+'%</td><td style="color:#48d976;font-weight:600">'+fmt(d.conversations)+'</td><td style="color:#48d976;font-weight:600">'+cpr2+'</td></tr>';
+  }).join('');
+
+  document.getElementById('main-content').innerHTML=
+    '<div class="sec-label">Visao geral '+label+unitBadge+'</div>'+
+    '<div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">'+
+      '<div class="kpi-box green"><div class="kpi-label">Investimento</div><div class="kpi-val">'+fmtK(total.spend)+'</div><div class="kpi-sub">total no periodo</div></div>'+
+      '<div class="kpi-box teal"><div class="kpi-label">Alcance</div><div class="kpi-val">'+fmt(total.reach)+'</div><div class="kpi-sub">freq '+freq.toFixed(2)+'x - CPM '+fmtR(cpm)+'</div></div>'+
+      '<div class="kpi-box amber"><div class="kpi-label">Cliques</div><div class="kpi-val">'+fmt(total.clicks)+'</div><div class="kpi-sub">CTR '+ctr.toFixed(2)+'%</div></div>'+
+      '<div class="kpi-box green"><div class="kpi-label">Conversas WhatsApp</div><div class="kpi-val">'+fmt(total.conversations)+'</div><div class="kpi-sub '+(cprOk?'up':'dn')+'">CPR '+fmtR(cpr)+'</div></div>'+
+    '</div>'+
+    '<div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">'+
+      '<div class="kpi-box purple"><div class="kpi-label">Aquisicoes</div><div class="kpi-val">'+(totalAquis||'-')+'</div><div class="kpi-sub">ticket medio R$ '+fmt(TICKET)+'</div></div>'+
+      '<div class="kpi-box purple"><div class="kpi-label">Faturamento Est.</div><div class="kpi-val">'+(faturamento>0?fmtK(faturamento):'-')+'</div></div>'+
+      '<div class="kpi-box blue"><div class="kpi-label">ROAS Est.</div><div class="kpi-val">'+(roas>0?roas.toFixed(2)+'x':'-')+'</div><div class="kpi-sub">fat/invest</div></div>'+
+      '<div class="kpi-box blue"><div class="kpi-label">CAC</div><div class="kpi-val">'+(cac>0?fmtR(cac):'-')+'</div><div class="kpi-sub">custo por aquisicao</div></div>'+
+    '</div>'+
+    '<div class="charts-row" style="grid-template-columns:2fr 1fr">'+
+      '<div class="chart-box"><div class="chart-title">Conversas por dia <span>'+fmt(total.conversations)+' total</span></div><canvas id="ch-conv"></canvas></div>'+
+      '<div class="chart-box"><div class="chart-title">Conversao vs Conteudo</div><canvas id="ch-tipo"></canvas></div>'+
+    '</div>'+
+    '<div class="charts-row" style="grid-template-columns:1fr 1fr 1fr">'+
+      '<div class="chart-box"><div class="chart-title">Investimento diario <span>'+fmtK(total.spend)+'</span></div><canvas id="ch-spend"></canvas></div>'+
+      '<div class="chart-box"><div class="chart-title">CTR diario</div><canvas id="ch-ctr"></canvas></div>'+
+      '<div class="chart-box"><div class="chart-title">CPR diario</div><canvas id="ch-cpr"></canvas></div>'+
+    '</div>'+
+    '<div class="sec-label">Ranking de campanhas</div>'+
+    '<div class="chart-box" style="overflow-x:auto">'+
+      '<table class="camp-table" style="min-width:600px"><thead><tr><th>Campanha</th><th>Tipo</th><th>Invest.</th><th>Impressoes</th><th>Cliques</th><th>CTR</th><th>Conversas</th><th>CPR</th></tr></thead>'+
+      '<tbody>'+campRows+'</tbody></table>'+
+    '</div>';
+
+  var chCfg={responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#555',font:{size:10}},grid:{color:'rgba(255,255,255,.03)'},border:{display:false}},y:{ticks:{color:'#555',font:{size:10}},grid:{color:'rgba(255,255,255,.03)'},border:{display:false}}}};
+  dc('ch-conv');
+  charts['ch-conv']=new Chart(document.getElementById('ch-conv'),{type:'bar',data:{labels:dlbls,datasets:[{data:days.map(function(d){ return byDay[d].conversations; }),backgroundColor:'rgba(72,217,118,.7)',borderRadius:4}]},options:chCfg});
+  dc('ch-tipo');
+  charts['ch-tipo']=new Chart(document.getElementById('ch-tipo'),{type:'doughnut',data:{labels:['Conversao','Conteudo'],datasets:[{data:[eng.conversations,cont.conversations],backgroundColor:['rgba(72,217,118,.8)','rgba(74,240,200,.5)'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{color:'#666',font:{size:10}}}}}});
+  dc('ch-spend');
+  charts['ch-spend']=new Chart(document.getElementById('ch-spend'),{type:'line',data:{labels:dlbls,datasets:[{data:days.map(function(d){ return byDay[d].spend.toFixed(2); }),borderColor:'#f0a44a',backgroundColor:'rgba(240,164,74,.08)',tension:.4,fill:true,pointRadius:2}]},options:chCfg});
+  dc('ch-ctr');
+  charts['ch-ctr']=new Chart(document.getElementById('ch-ctr'),{type:'line',data:{labels:dlbls,datasets:[{data:days.map(function(d){ return byDay[d].impressions>0?(byDay[d].clicks/byDay[d].impressions*100).toFixed(2):0; }),borderColor:'#4a90d9',backgroundColor:'rgba(74,144,217,.08)',tension:.4,fill:true,pointRadius:2}]},options:chCfg});
+  dc('ch-cpr');
+  charts['ch-cpr']=new Chart(document.getElementById('ch-cpr'),{type:'line',data:{labels:dlbls,datasets:[{data:days.map(function(d){ return byDay[d].conversations>0?(byDay[d].spend/byDay[d].conversations).toFixed(2):null; }),borderColor:'#48d976',backgroundColor:'rgba(72,217,118,.08)',tension:.4,fill:true,pointRadius:2,spanGaps:true}]},options:chCfg});
+}
+
+function setPeriod(p,el){
+  currentPeriod=p;
+  document.querySelectorAll('.ppill').forEach(function(x){ x.classList.remove('active'); });
+  el.classList.add('active');
+  document.getElementById('custom-range').style.display=p==='custom'?'flex':'none';
+  if(p!=='custom'&&metaData.length) renderDashboard();
+}
+function applyCustom(){
+  customFrom=document.getElementById('date-from').value;
+  customTo=document.getElementById('date-to').value;
+  if(customFrom&&customTo&&metaData.length) renderDashboard();
+}
+
+loadData();
+</script>
+</body>
+</html>
